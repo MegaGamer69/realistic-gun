@@ -1,0 +1,498 @@
+import java.util.ArrayList;
+
+public class Main
+{
+	public static void main(String[] args)
+	{
+		Magazine magazine = new Magazine(30);
+		
+		for(int b = 0; b < (int)(Math.random() * 31); b++)
+		{
+			System.out.println("Colocando bala de número " + (b + 1) + ".");
+			
+			if(Math.random() >= 0.5)
+			{
+				magazine.putBullet(new Bullet("7.62x45mm"));
+			}
+			else
+			{
+				magazine.putBullet(new Bullet("7.62x25mm"));
+			}
+			
+			System.out.println("");
+		}
+		
+		Ejector ejector = new Ejector();
+		Hammer hammer = new Hammer();
+		Trigger trigger = new Trigger();
+		Bolt bolt = new Bolt();
+		
+		hammer.setEjector(ejector);
+		trigger.setHammer(hammer);
+		bolt.setEjector(ejector);
+		bolt.setHammer(hammer);
+		
+		magazine.printStatus();
+		hammer.printStatus();
+		trigger.printStatus();
+		bolt.printStatus();
+		
+		Weapon weapon = new Weapon(new WeaponPiece[]{magazine, ejector, hammer, trigger, bolt});
+		
+		for(int b = 0; b < (int)(Math.random() * 31); b++)
+		{
+			System.out.println("Inicializando tiro. Rodada: " + (b + 1) + ".");
+			weapon.fire();
+			
+			System.out.println("");
+			
+			magazine.printStatus();
+			hammer.printStatus();
+			trigger.printStatus();
+			bolt.printStatus();
+			
+			System.out.println("");
+		}
+	}
+}
+
+class Bullet
+{
+	private String caliber = "Nameless Caliber";
+	
+	private boolean ejected = false;
+	private boolean fired = false;
+	
+	public Bullet(String calName)
+	{
+		caliber = (calName != null) ? calName : caliber;
+	}
+	
+	public String getCaliber()
+	{
+		return(caliber);
+	}
+	
+	public boolean tryToFire()
+	{
+		return(!fired && !ejected);
+	}
+	
+	public void eject()
+	{
+		ejected = true;
+		
+		if(fired)
+		{
+			System.out.println("A arma disparou a bala. BOOM!");
+		}
+		else
+		{
+			System.out.println("A arma ejetou a bala sem sucesso.");
+		}
+	}
+	
+	public void fire()
+	{
+		if(tryToFire())
+		{
+			fired = true;
+			
+			System.out.println(String.format("A bala %s foi disparada.", caliber));
+		}
+	}
+	
+	public boolean getState()
+	{
+		return(fired);
+	}
+	
+	public boolean isEjected()
+	{
+		return(ejected);
+	}
+}
+
+class WeaponPiece
+{
+	protected float dirtness = 0F; // Nível de sujeira.
+	protected float careness = 1F; // Nível de cuidado contra desgaste.
+	private boolean activated = false;
+	
+	protected WeaponPiece[] dependencies = null;
+	
+	public WeaponPiece(WeaponPiece[] deps)
+	{
+		dependencies = (deps != null) ? deps : new WeaponPiece[0];
+	}
+	
+	public void printStatus()
+	{
+		System.out.println(String.format("%s(dirtness=%.2f;careness=%.2f;)\n", toString(), dirtness, careness));
+	}
+	
+	public final boolean isWorking()
+	{
+		return(dirtness <= 0.3F && careness >= 0.7F);
+	}
+	
+	public final boolean canWork()
+	{
+		if(!isWorking())
+		{
+			return(false);
+		}
+		
+		for(WeaponPiece piece : dependencies)
+		{
+			if(piece != null && !piece.canWork())
+			{
+				return(false);
+			}
+		}
+		
+		return(true);
+	}
+	
+	// Ative o funcionamento da peça (ex.: ejete a capsula pelo ejetor).
+	
+	public void activate()
+	{
+		activated = true;
+		
+		dirtness += 0.01F;
+		careness -= 0.07F;
+	}
+
+	public void reset()
+	{
+		activated = false;
+	}
+}
+
+class Magazine extends WeaponPiece
+{
+	private int capacity = 0;
+	
+	private ArrayList<Bullet> bullets = new ArrayList<Bullet>();
+	
+	public Magazine(int cap)
+	{
+		super(null);
+		
+		capacity = Math.max(cap, 0);
+		bullets = new ArrayList<Bullet>();
+	}
+	
+	public void putBullet(Bullet bullet)
+	{
+		if(bullets.size() < capacity && bullet != null)
+		{
+			bullets.add(bullet); // Por realismo, coloque uma bala no pente manualmente.
+			System.out.printf("Adicionado uma (1) bala ao pente. (%s)\n", bullet.getCaliber());
+		}
+		else
+		{
+			System.out.println("Você excedeu o limite de balas.");
+		}
+	}
+	
+	public Bullet feedBullet()
+	{
+		if(canWork() && bullets.size() > 0)
+		{
+			super.activate();
+			
+			Bullet b = bullets.remove(0);
+			
+			System.out.println("O projétil foi alimentado.");
+			
+			return(b);
+		}
+		else
+		{
+			System.out.println("Houve uma falha ao alimentar o projétil.");
+			
+			return(null);
+		}
+	}
+	
+	public int getBulletAmount()
+	{
+		return(bullets.size());
+	}
+	
+	@Override
+	public void activate()
+	{
+		if(isWorking())
+		{
+			super.activate();
+			
+			feedBullet();
+		}
+		else
+		{
+			System.out.println(String.format("Houve uma falha ao ativar o %s.", toString()));
+		}
+	}
+
+	@Override
+	public String toString()
+	{
+		return("Pente");
+	}
+}
+
+class Ejector extends WeaponPiece
+{
+	private Bullet cartridge = null;
+	
+	public Ejector()
+	{
+		super(new WeaponPiece[1]);
+	}
+	
+	public void put(Bullet instance)
+	{
+		cartridge = instance;
+	}
+	
+	@Override
+	public void activate()
+	{
+		if(canWork() && cartridge != null)
+		{
+			super.activate();
+			
+			cartridge.eject();
+			System.out.println("A capsula disparada foi ejetada com sucesso.");
+			
+			cartridge = null;
+		}
+		else
+		{
+			System.out.println(String.format("Houve uma falha ao ativar o %s.", toString()));
+		}
+	}
+	
+	public void setCartridge(Bullet value)
+	{
+		cartridge = value;
+	}
+
+	@Override
+	public String toString()
+	{
+		return("Ejetor");
+	}
+}
+
+class Trigger extends WeaponPiece
+{
+	private Hammer hammer = null;
+	
+	public Trigger()
+	{
+		super(new WeaponPiece[1]);
+	}
+	
+	@Override
+	public void activate()
+	{
+		if(canWork() && hammer != null)
+		{
+			super.activate();
+			
+			System.out.println("O gatilho foi pressionado");
+			hammer.activate();
+		}
+		else
+		{
+			System.out.println(String.format("Houve uma falha ao ativar o %s.", toString()));
+		}
+	}
+	
+	public void setHammer(Hammer value)
+	{
+		hammer = value;
+		
+		dependencies[0] = hammer;
+	}
+
+	@Override
+	public String toString()
+	{
+		return("Gatilho");
+	}
+}
+
+class Hammer extends WeaponPiece
+{
+	private Bullet chamberedBullet = null;
+	private Ejector ejector = null;
+	
+	public Hammer()
+	{
+		super(new WeaponPiece[1]);
+	}
+	
+	public void loadBullet(Bullet bullet)
+	{
+		if(!canWork()) return;
+		
+		if(chamberedBullet == null)
+		{
+			chamberedBullet = bullet;
+		}
+		else
+		{
+			System.out.println("O martelo já possúi uma bala preparada.");
+			
+			return;
+		}
+	}
+	
+	@Override
+	public void activate()
+	{
+		if(canWork() && chamberedBullet != null)
+		{
+			super.activate();
+			
+			System.out.println("O martelo foi acionado.");
+			chamberedBullet.fire();
+			ejector.put(chamberedBullet);
+			
+			chamberedBullet = null;
+		}
+	}
+	
+	public void setEjector(Ejector value)
+	{
+		ejector = value;
+		
+		dependencies[0] = ejector;
+	}
+
+	public Ejector getEjector()
+	{
+		return(ejector);
+	}
+
+	public Bullet getChamberedBullet()
+	{
+		return(chamberedBullet);
+	}
+
+	@Override
+	public String toString()
+	{
+		return("Martelo");
+	}
+}
+
+class Bolt extends WeaponPiece
+{
+	private Ejector ejector = null;
+	private Hammer hammer = null;
+	
+	public Bolt()
+	{
+		super(new WeaponPiece[2]);
+	}
+	
+	@Override
+	public void activate()
+	{
+		if(canWork() && ejector != null && hammer != null)
+		{
+			super.activate();
+			
+			System.out.println("O ferrolho foi ativado.");
+			ejector.activate();
+		}
+	}
+
+	public void setEjector(Ejector value)
+	{
+		ejector = value;
+		
+		dependencies[0] = value;
+	}
+
+	public void setHammer(Hammer value)
+	{
+		hammer = value;
+		
+		dependencies[1] = value;
+	}
+	
+	public Ejector getEjector()
+	{
+		return(ejector);
+	}
+
+	public Hammer getHammer()
+	{
+		return(hammer);
+	}
+
+	@Override
+	public String toString()
+	{
+		return("Ferrolho");
+	}
+}
+
+class Weapon
+{
+	private WeaponPiece[] pieces = null;
+	
+	public Weapon(WeaponPiece[] pieces)
+	{
+		this.pieces = (pieces != null) ? pieces : new WeaponPiece[0];
+	}
+	
+	public void fire()
+	{
+		for(WeaponPiece piece : pieces)
+		{
+			piece.reset();
+		}
+
+		Magazine magazine = null;
+		Hammer hammer = null;
+		Trigger trigger = null;
+		Bolt bolt = null;
+		
+		for(WeaponPiece piece : pieces)
+		{
+			if(piece instanceof Magazine) magazine = (Magazine)(piece);
+			if(piece instanceof Hammer) hammer = (Hammer)(piece);
+			if(piece instanceof Trigger) trigger = (Trigger)(piece);
+			if(piece instanceof Bolt) bolt = (Bolt)(piece);
+		}
+		
+		if(magazine != null && hammer != null && trigger != null && bolt != null)
+		{
+			Bullet bullet = magazine.feedBullet();
+			
+			if(bullet != null)
+			{
+				magazine.activate();
+				hammer.loadBullet(bullet);
+				trigger.activate();
+				bolt.activate();
+			}
+			else
+			{
+				System.out.println("Está sem munição suficiente.");
+			}
+		}
+		else
+		{
+			System.out.println("A arma está incompleta.");
+		}
+	}
+}
