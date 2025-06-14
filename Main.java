@@ -6,9 +6,9 @@ public class Main
 	{
 		Magazine magazine = new Magazine(30);
 		
-		for(int b = 1; b < (int)(Math.random() * 31); b++)
+		for(int b = 0; b < 30; b++)
 		{
-			System.out.println("Colocando bala de número " + (b) + ".");
+			System.out.println("Colocando bala de número " + (b + 1) + ".");
 			
 			double chance = Math.random();
 			
@@ -47,7 +47,7 @@ public class Main
 		
 		Weapon weapon = new Weapon(new WeaponPiece[]{magazine, ejector, hammer, trigger, bolt, chamber});
 		
-		for(int b = 0; b < (int)(Math.random() * 31); b++)
+		for(int b = 0; b < 31; b++)
 		{
 			System.out.println("Inicializando tiro. Rodada: " + (b + 1) + ".");
 			weapon.fire();
@@ -58,6 +58,7 @@ public class Main
 			hammer.printStatus();
 			trigger.printStatus();
 			bolt.printStatus();
+			chamber.printStatus();
 		}
 	}
 }
@@ -166,8 +167,8 @@ class WeaponPiece
 	{
 		activated = true;
 		
-		dirtiness += 0.01F;
-		careness -= 0.07F;
+		dirtiness += 0.002F;
+		careness -= 0.002F;
 	}
 
 	public void reset()
