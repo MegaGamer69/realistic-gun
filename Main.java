@@ -540,7 +540,6 @@ class Weapon
 			if(bullet != null)
 			{
 				chamber.load(bullet);
-				hammer.activate();
 				trigger.activate();
 				chamber.fire();
 				bolt.activate();
