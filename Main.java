@@ -6,17 +6,23 @@ public class Main
 	{
 		Magazine magazine = new Magazine(30);
 		
-		for(int b = 0; b < (int)(Math.random() * 31); b++)
+		for(int b = 1; b < (int)(Math.random() * 31); b++)
 		{
-			System.out.println("Colocando bala de número " + (b + 1) + ".");
+			System.out.println("Colocando bala de número " + (b) + ".");
 			
-			if(Math.random() >= 0.5)
+			double chance = Math.random();
+			
+			if(chance <= 0.25)
 			{
 				magazine.putBullet(new Bullet("7.62x45mm"));
 			}
-			else
+			else if(chance <= 0.75 && chance > 0.25)
 			{
 				magazine.putBullet(new Bullet("7.62x25mm"));
+			}
+			else
+			{
+				magazine.putBullet(new Bullet(".45 ACP"));
 			}
 			
 			System.out.println("");
@@ -26,18 +32,20 @@ public class Main
 		Hammer hammer = new Hammer();
 		Trigger trigger = new Trigger();
 		Bolt bolt = new Bolt();
+		Chamber chamber = new Chamber();
 		
-		hammer.setEjector(ejector);
 		trigger.setHammer(hammer);
 		bolt.setEjector(ejector);
 		bolt.setHammer(hammer);
+		chamber.setEjector(ejector);
 		
 		magazine.printStatus();
 		hammer.printStatus();
 		trigger.printStatus();
 		bolt.printStatus();
+		chamber.printStatus();
 		
-		Weapon weapon = new Weapon(new WeaponPiece[]{magazine, ejector, hammer, trigger, bolt});
+		Weapon weapon = new Weapon(new WeaponPiece[]{magazine, ejector, hammer, trigger, bolt, chamber});
 		
 		for(int b = 0; b < (int)(Math.random() * 31); b++)
 		{
@@ -50,8 +58,6 @@ public class Main
 			hammer.printStatus();
 			trigger.printStatus();
 			bolt.printStatus();
-			
-			System.out.println("");
 		}
 	}
 }
@@ -115,7 +121,7 @@ class Bullet
 
 class WeaponPiece
 {
-	protected float dirtness = 0F; // Nível de sujeira.
+	protected float dirtiness = 0F; // Nível de sujeira.
 	protected float careness = 1F; // Nível de cuidado contra desgaste.
 	private boolean activated = false;
 	
@@ -128,12 +134,12 @@ class WeaponPiece
 	
 	public void printStatus()
 	{
-		System.out.println(String.format("%s(dirtness=%.2f;careness=%.2f;)\n", toString(), dirtness, careness));
+		System.out.println(String.format("%s(dirtiness=%.2f;careness=%.2f;)\n", toString(), dirtiness, careness));
 	}
 	
 	public final boolean isWorking()
 	{
-		return(dirtness <= 0.3F && careness >= 0.7F);
+		return(dirtiness <= 0.3F && careness >= 0.7F);
 	}
 	
 	public final boolean canWork()
@@ -160,7 +166,7 @@ class WeaponPiece
 	{
 		activated = true;
 		
-		dirtness += 0.01F;
+		dirtiness += 0.01F;
 		careness -= 0.07F;
 	}
 
@@ -329,7 +335,6 @@ class Trigger extends WeaponPiece
 
 class Hammer extends WeaponPiece
 {
-	private Bullet chamberedBullet = null;
 	private Ejector ejector = null;
 	
 	public Hammer()
@@ -337,34 +342,14 @@ class Hammer extends WeaponPiece
 		super(new WeaponPiece[1]);
 	}
 	
-	public void loadBullet(Bullet bullet)
-	{
-		if(!canWork()) return;
-		
-		if(chamberedBullet == null)
-		{
-			chamberedBullet = bullet;
-		}
-		else
-		{
-			System.out.println("O martelo já possúi uma bala preparada.");
-			
-			return;
-		}
-	}
-	
 	@Override
 	public void activate()
 	{
-		if(canWork() && chamberedBullet != null)
+		if(canWork())
 		{
 			super.activate();
 			
 			System.out.println("O martelo foi acionado.");
-			chamberedBullet.fire();
-			ejector.put(chamberedBullet);
-			
-			chamberedBullet = null;
 		}
 	}
 	
@@ -378,11 +363,6 @@ class Hammer extends WeaponPiece
 	public Ejector getEjector()
 	{
 		return(ejector);
-	}
-
-	public Bullet getChamberedBullet()
-	{
-		return(chamberedBullet);
 	}
 
 	@Override
@@ -445,6 +425,82 @@ class Bolt extends WeaponPiece
 	}
 }
 
+class Chamber extends WeaponPiece
+{
+	private Bullet loadedBullet = null;
+	private Ejector ejector = null;
+	
+	public Chamber()
+	{
+		super(new WeaponPiece[1]);
+	}
+	
+	public void setEjector(Ejector value)
+	{
+		ejector = value;
+		
+		dependencies[0] = value;
+	}
+	
+	public Ejector getEjector()
+	{
+		return(ejector);
+	}
+	
+	public void load(Bullet bullet)
+	{
+		if(!canWork()) return;
+		
+		if(loadedBullet != null) eject();
+		
+		System.out.println("A câmara foi carregada.");
+		
+		loadedBullet = bullet;
+		
+		activate();
+	}
+	
+	public void eject()
+	{
+		if(loadedBullet != null)
+		{
+			ejector.put(loadedBullet);
+			loadedBullet.eject();
+			
+			loadedBullet = null;
+			
+			activate();
+		}
+	}
+	
+	public void fire()
+	{
+		if(canWork() && loadedBullet != null)
+		{
+			System.out.println("A câmara disparou a bala.");
+			
+			loadedBullet.fire();
+			ejector.put(loadedBullet);
+			
+			loadedBullet = null;
+			
+			activate();
+		}
+	}
+	
+	@Override
+	public void activate()
+	{
+		super.activate();
+	}
+	
+	@Override
+	public String toString()
+	{
+		return("Câmara");
+	}
+}
+
 class Weapon
 {
 	private WeaponPiece[] pieces = null;
@@ -465,6 +521,7 @@ class Weapon
 		Hammer hammer = null;
 		Trigger trigger = null;
 		Bolt bolt = null;
+		Chamber chamber = null;
 		
 		for(WeaponPiece piece : pieces)
 		{
@@ -472,17 +529,19 @@ class Weapon
 			if(piece instanceof Hammer) hammer = (Hammer)(piece);
 			if(piece instanceof Trigger) trigger = (Trigger)(piece);
 			if(piece instanceof Bolt) bolt = (Bolt)(piece);
+			if(piece instanceof Chamber) chamber = (Chamber)(piece);
 		}
 		
-		if(magazine != null && hammer != null && trigger != null && bolt != null)
+		if(magazine != null && hammer != null && trigger != null && bolt != null && chamber != null)
 		{
 			Bullet bullet = magazine.feedBullet();
 			
 			if(bullet != null)
 			{
-				magazine.activate();
-				hammer.loadBullet(bullet);
+				chamber.load(bullet);
+				hammer.activate();
 				trigger.activate();
+				chamber.fire();
 				bolt.activate();
 			}
 			else
