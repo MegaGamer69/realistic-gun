@@ -2,64 +2,49 @@ import java.util.ArrayList;
 
 public class Main
 {
+	private static void reload(Magazine magazine, int max)
+	{
+		for(int i = 0; i < max; i++)
+		{
+			System.out.println("Colocando bala de número " + (i + 1) + ".");
+			
+			magazine.putBullet(new Bullet("5.56x45mm NATO"));
+		}
+	}
+	
+	private static void fire(Weapon weapon, int max)
+	{
+		for(int i = 0; i < max; i++)
+		{
+			weapon.fire();
+		}
+	}
+	
 	public static void main(String[] args)
 	{
-		Magazine magazine = new Magazine(30);
-		
-		for(int b = 0; b < 30; b++)
-		{
-			System.out.println("Colocando bala de número " + (b + 1) + ".");
-			
-			double chance = Math.random();
-			
-			if(chance <= 0.25)
-			{
-				magazine.putBullet(new Bullet("7.62x45mm"));
-			}
-			else if(chance <= 0.75 && chance > 0.25)
-			{
-				magazine.putBullet(new Bullet("7.62x25mm"));
-			}
-			else
-			{
-				magazine.putBullet(new Bullet(".45 ACP"));
-			}
-			
-			System.out.println("");
-		}
-		
-		Ejector ejector = new Ejector();
-		Hammer hammer = new Hammer();
-		Trigger trigger = new Trigger();
+		testColtM4A1();
+	}
+	
+	private static void testColtM4A1()
+	{
 		Bolt bolt = new Bolt();
 		Chamber chamber = new Chamber();
+		Ejector ejector = new Ejector();
+		Hammer hammer = new Hammer();
+		Magazine magazine = new Magazine(30);
+		Trigger trigger = new Trigger();
 		
-		trigger.setHammer(hammer);
 		bolt.setEjector(ejector);
 		bolt.setHammer(hammer);
 		chamber.setEjector(ejector);
+		hammer.setEjector(ejector);
+		trigger.setHammer(hammer);
 		
-		magazine.printStatus();
-		hammer.printStatus();
-		trigger.printStatus();
-		bolt.printStatus();
-		chamber.printStatus();
+		Weapon m4a1 = new Weapon(bolt, chamber, ejector, hammer, magazine, trigger);
 		
-		Weapon weapon = new Weapon(new WeaponPiece[]{magazine, ejector, hammer, trigger, bolt, chamber});
-		
-		for(int b = 0; b < 31; b++)
-		{
-			System.out.println("Inicializando tiro. Rodada: " + (b + 1) + ".");
-			weapon.fire();
-			
-			System.out.println("");
-			
-			magazine.printStatus();
-			hammer.printStatus();
-			trigger.printStatus();
-			bolt.printStatus();
-			chamber.printStatus();
-		}
+		fire(m4a1, 1);
+		reload(magazine, 20);
+		fire(m4a1, 21);
 	}
 }
 
@@ -135,7 +120,7 @@ class WeaponPiece
 	
 	public void printStatus()
 	{
-		System.out.println(String.format("%s(dirtiness=%.2f;careness=%.2f;)\n", toString(), dirtiness, careness));
+		System.out.println(String.format("%s(dirtiness=%.4f;careness=%.4f;)\n", toString(), dirtiness, careness));
 	}
 	
 	public final boolean isWorking()
@@ -168,7 +153,7 @@ class WeaponPiece
 		activated = true;
 		
 		dirtiness += 0.002F;
-		careness -= 0.002F;
+		careness -= 0.0005F;
 	}
 
 	public void reset()
@@ -506,9 +491,14 @@ class Weapon
 {
 	private WeaponPiece[] pieces = null;
 	
-	public Weapon(WeaponPiece[] pieces)
+	public Weapon(WeaponPiece... pieces)
 	{
-		this.pieces = (pieces != null) ? pieces : new WeaponPiece[0];
+		this.pieces = new WeaponPiece[6];
+		
+		for(int i = 0; i < this.pieces.length; i++)
+		{
+			this.pieces[i] = pieces[i];
+		}
 	}
 	
 	public void fire()
